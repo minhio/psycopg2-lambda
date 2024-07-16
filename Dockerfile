@@ -4,9 +4,9 @@ ARG POSTGRES_VER
 ARG PSYCOPG_VER
 
 RUN dnf install -y \
-    postgresql-devel \
     libicu-devel \
     openssl-devel \
+    libpq-devel \
     && dnf clean all \
     && rm -rf /var/cache/dnf
 
@@ -16,36 +16,41 @@ RUN pip install --upgrade pip \
     && pip install setuptools
 
 ENV PYTHON_VER=3.12
-ENV TMP_DIR=/tmp/psycopg2
+ENV TMP_DIR=/tmp
 ENV OUTPUT_DIR=/var/output
 
+ENV POSTGRES_BUILD_DIR=$OUTPUT_DIR/postgresql
+ENV PSYCOPG_BUILD_DIR=$OUTPUT_DIR/psycopg2
+
 RUN mkdir -p "$TMP_DIR"
-RUN mkdir -p "$OUTPUT_DIR"
 
 WORKDIR $TMP_DIR
 
+# download postgres
 RUN curl -fsSL -o postgresql-${POSTGRES_VER}.tar.gz https://ftp.postgresql.org/pub/source/v${POSTGRES_VER}/postgresql-${POSTGRES_VER}.tar.gz \
     && tar -zxf postgresql-${POSTGRES_VER}.tar.gz
 
-RUN cd postgresql-${POSTGRES_VER} \
-    && ./configure --prefix ${TMP_DIR}/postgresql-${POSTGRES_VER} --without-readline --with-ssl=openssl \
-    && make \
-    && make install
-
+# download psycopg2
 RUN curl -fsSL -o psycopg2-${PSYCOPG_VER}.tar.gz https://github.com/psycopg/psycopg2/archive/refs/tags/${PSYCOPG_VER}.tar.gz \
     && tar -zxf psycopg2-${PSYCOPG_VER}.tar.gz
 
+# build postgres
+RUN cd postgresql-${POSTGRES_VER} \
+    && mkdir -p "$POSTGRES_BUILD_DIR" \
+    && ./configure --prefix "$POSTGRES_BUILD_DIR" --without-readline --with-ssl=openssl \
+    && make \
+    && make install
 
+# build psycopg2
 RUN cd psycopg2-${PSYCOPG_VER} \
-    && sed -i "s:pg_config=:pg_config=${TMP_DIR}/postgresql-${POSTGRES_VER}/bin/pg_config:g" setup.cfg \
-    && sed -i 's:static_libpq=0:static_libpq=1:g' setup.cfg \
-    && sed -i 's:libraries=:libraries=ssl crypto:g' setup.cfg \
-    && python setup.py build
+    && python setup.py build_ext \
+    --pg-config=${POSTGRES_BUILD_DIR}/bin/pg_config \
+    --static-libpq \
+    --libraries=ssl,crypto \
+    build
 
-RUN mkdir -p "$OUTPUT_DIR/psycopg2" \
-    && cp -r psycopg2-${PSYCOPG_VER}/build/lib.linux-x86_64-cpython-$(echo "$PYTHON_VER" | tr -d '.')/psycopg2 "$OUTPUT_DIR/psycopg2"
-
-RUN mkdir -p "$OUTPUT_DIR/psycopg2/lib" \
-    && cp postgresql-${POSTGRES_VER}/lib/libpq.* "$OUTPUT_DIR/psycopg2/lib"
+# move psycopg2 build to output dir
+RUN mkdir -p "$PSYCOPG_BUILD_DIR" \
+    && cp -r psycopg2-${PSYCOPG_VER}/build/lib.linux-x86_64-cpython-$(echo "$PYTHON_VER" | tr -d '.')/psycopg2/* "$PSYCOPG_BUILD_DIR"
 
 WORKDIR "$OUTPUT_DIR"
