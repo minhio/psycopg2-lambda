@@ -3,9 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - POSTGRES_VER=16.3
-        - PSYCOPG_VER=2.9.9
-    command: cp -r ./ /psycopg2-lambda/build
+    command: cp -r /var/output /psycopg2-lambda/build
     volumes:
       - .:/psycopg2-lambda
