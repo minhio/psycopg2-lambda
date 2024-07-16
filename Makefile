@@ -8,14 +8,14 @@ build:
 	docker compose build
 	docker compose run --rm build-psycopg2
 
-./psycopg2-layer/python:
+./psycopg2-layer/python: build
 	mkdir -p ./psycopg2-layer/python
 	cp -r ./build/psycopg2/psycopg2 ./psycopg2-layer/python
 
-./psycopg2-layer/lib:
+./psycopg2-layer/lib: build
 	cp -r ./build/psycopg2/lib ./psycopg2-layer
 
-.aws-sam: build ./psycopg2-layer/python ./psycopg2-layer/lib
+.aws-sam: ./psycopg2-layer/python ./psycopg2-layer/lib
 	sam build --use-container
 
 .PHONY: clean
