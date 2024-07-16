@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform:
+  - AWS::Serverless-2016-10-31
+
+Resources:
+  Psycopg2Layer:
+    DeletionPolicy: Delete
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: ./psycopg2-layer
+      CompatibleRuntimes:
+        - python3.12
+      CompatibleArchitectures:
+        - x86_64
+    Metadata:
+      BuildMethod: makefile
+  
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main.handler
+      Runtime: python3.12
+      CodeUri: ./hello-world-lambda
+      Layers:
+        - !Ref Psycopg2Layer
