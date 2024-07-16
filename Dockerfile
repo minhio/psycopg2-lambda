@@ -6,6 +6,7 @@ ARG PSYCOPG_VER
 RUN dnf install -y \
     postgresql-devel \
     libicu-devel \
+    openssl-devel \
     && dnf clean all \
     && rm -rf /var/cache/dnf
 
@@ -27,18 +28,19 @@ RUN curl -fsSL -o postgresql-${POSTGRES_VER}.tar.gz https://ftp.postgresql.org/p
     && tar -zxf postgresql-${POSTGRES_VER}.tar.gz
 
 RUN cd postgresql-${POSTGRES_VER} \
-    && ./configure --prefix ${TMP_DIR}/postgresql-${POSTGRES_VER} --without-readline \
+    && ./configure --prefix ${TMP_DIR}/postgresql-${POSTGRES_VER} --without-readline --with-ssl=openssl \
     && make \
     && make install
 
 RUN curl -fsSL -o psycopg2-${PSYCOPG_VER}.tar.gz https://github.com/psycopg/psycopg2/archive/refs/tags/${PSYCOPG_VER}.tar.gz \
     && tar -zxf psycopg2-${PSYCOPG_VER}.tar.gz
 
+
 RUN cd psycopg2-${PSYCOPG_VER} \
-    && python setup.py build_ext \
-    --pg-config=${TMP_DIR}/postgresql-${POSTGRES_VER}/bin/pg_config \
-    --static-libpq \
-    build
+    && sed -i "s:pg_config=:pg_config=${TMP_DIR}/postgresql-${POSTGRES_VER}/bin/pg_config:g" setup.cfg \
+    && sed -i 's:static_libpq=0:static_libpq=1:g' setup.cfg \
+    && sed -i 's:libraries=:libraries=ssl crypto:g' setup.cfg \
+    && python setup.py build
 
 RUN mkdir -p "$OUTPUT_DIR/psycopg2" \
     && cp -r psycopg2-${PSYCOPG_VER}/build/lib.linux-x86_64-cpython-$(echo "$PYTHON_VER" | tr -d '.')/psycopg2 "$OUTPUT_DIR/psycopg2"
