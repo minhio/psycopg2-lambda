@@ -10,10 +10,11 @@ build:
 
 ./psycopg2-layer/python: build
 	mkdir -p ./psycopg2-layer/python
-	cp -r ./build/psycopg2/psycopg2 ./psycopg2-layer/python
+	cp -r ./build/psycopg2 ./psycopg2-layer/python
 
 ./psycopg2-layer/lib: build
-	cp -r ./build/psycopg2/lib ./psycopg2-layer
+	mkdir -p ./psycopg2-layer/lib
+	cp -r ./build/postgresql/lib/* ./psycopg2-layer/lib
 
 .aws-sam: ./psycopg2-layer/python ./psycopg2-layer/lib
 	sam build --use-container
