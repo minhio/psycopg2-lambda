@@ -8,9 +8,6 @@ ENV OUTPUT_DIR=/var/output
 ENV POSTGRES_BUILD_DIR=$OUTPUT_DIR/postgresql
 ENV PSYCOPG_BUILD_DIR=$OUTPUT_DIR/psycopg2
 
-COPY ./certs/athene.crt /etc/pki/ca-trust/source/anchors/athene.crt
-RUN update-ca-trust extract
-
 RUN dnf update && dnf upgrade \
     && dnf install -y \
         tar \
